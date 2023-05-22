@@ -10,42 +10,80 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #ifndef MilesTag_h
 #define MilesTag_h
 
-#include "Arduino.h"
-#include <driver/rmt.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
+#include "esp32-hal.h"
+#include "esp_intr.h"
+#include "driver/gpio.h"
+#include "driver/rmt.h"
+#include "driver/periph_ctrl.h"
+#include "freertos/semphr.h"
+#include "soc/rmt_struct.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 class MilesTagTX
 {
   public:
-    MilesTagTX(uint32_t freq=56);
-    void fireShot(unsigned long teamId, unsigned long playerId, unsigned long dmg);
-    rmt_config_t configTx;
-    rmt_item32_t items[15];
+    MilesTagTX();
+    MilesTagTX(int _txPin, int _channel);
+    bool SetTx(int _txPin, int _channel);
+    void txConfig();
+    void fireShot(unsigned long playerId, unsigned long dmg);
+    void sendCommand(bool shortCommand, uint8_t command, uint16_t data);
+    void sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone);
+
   private:
-    void irTransmit(unsigned long Buffer);
-    unsigned long DamagetoBin(unsigned long dmg);
+    void irTransmit(unsigned long Buffer, int nbits);
+    unsigned long QuantitytoBin(unsigned long dmg);
     unsigned long has_even_parity(unsigned long x);
     unsigned long add_parity(unsigned long x);
+
+    int             txGpioNum;
+    int             txRmtPort;
 };
 
 typedef struct MTShotRecieved {
+  unsigned long Quantity;
   unsigned long PlayerID;
-  unsigned long TeamID;
-  unsigned long Damage;
   bool Error = true;
 } MTShotRecieved;
+
+typedef struct {
+  uint8_t Command;
+  uint16_t Data;
+  bool Error;
+} MTCommandData;
 
 class MilesTagRX
 {
   public:
     MilesTagRX();
+    MilesTagRX(int _rxPin, int _channel);
+    bool SetRx(int _rxPin, int _channel);
+    void rxConfig();
+    int readIR();
+    void decodeRAW(rmt_item32_t *rawDataIn, int numItems, unsigned int *irDataOut);
+    void getDataIR(rmt_item32_t item, unsigned int* irDataOut, int index);
     MTShotRecieved DecodeShotData(unsigned long data);
+    MTCommandData DecodeCommandData(unsigned long data);
+    void processCommand(uint16_t command);
     void ClearHits();
-    void BufferPull();
-    rmt_config_t configRx;
+    void ClearCommands();
+    bool BufferPull();
     MTShotRecieved Hits[20];
-    int HitCount;
+    MTCommandData Commands[20];
+    int HitCount = 0;
+    int CommandCount;
   private:
-    unsigned long BintoDamage(unsigned long dmg);
+    unsigned long BintoQuantity(unsigned long dmg);
     unsigned long has_even_parity(unsigned long x);
+    int             rxGpioNum;
+    int             rxRmtPort;    
 };
 #endif
