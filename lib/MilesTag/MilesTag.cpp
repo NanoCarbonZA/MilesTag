@@ -49,7 +49,10 @@ extern "C" {
 #define DEBUG_SCALE 1
 #define CDEBUG 1
 
-#define HEADER_US 3200
+#define SHOT_HEADER_US 3200                       // Header when send a shot
+#define CMD_HEADER_US 4000                        // Header when send a command
+#define CMD_EXTRA_US 5600                         // Marker indecating extra data
+#define END_US 6400                               // End Marker
 #define SPACE_US 800
 #define ONE_US 1600
 #define ZERO_US 800
@@ -167,42 +170,47 @@ void MilesTagTX::fireShot(unsigned long playerId, unsigned long dmg) {
    sendCommand(true, QuantitytoBin(dmg), playerId);
 }
 
-void MilesTagTX::sendCommand(bool shortCommand, uint8_t command, uint16_t data) {
+void MilesTagTX::sendCommand(bool shotCommand, uint8_t command, uint16_t data) {
   unsigned long encodedData = 0;
   Serial.println("sendCommand");
-  if (shortCommand) {
+  if (shotCommand) {
     Serial.println("short command");
     // Use 12 bits for short commands
-    encodedData |= (1 << 11); // Set the 12th bit for short command (1)
-    encodedData |= (command & 0xF) << 6; // Encode command (bits 11-8)
-    encodedData |= (data & 0x3F) << 1; // Encode player ID (bits 7-2)
+    encodedData |= (command & 0xF) << 6;  // Encode command (bits 10-7)    - 4 bits
+    encodedData |= (data & 0x3F);         // Encode player ID (bits 6-1)     - 6 bits
   } else {
     Serial.println("long command");
-    // Use 24 bits for long commands
-    encodedData |= (0 << 23); // Set the 24th bit for shot command (0)
-    encodedData |= (command & 0xF) << 18; // Encode command (bits 23-20)
-    encodedData |= (data & 0x3FFFF) << 1; // Encode data (bits 19-2)
+    // Use 22 bits for long commands
+    encodedData |= (command & 0xF) << 16; // Encode command (bits 20-17)  - 4 bits
+    encodedData |= (data & 0xFFFF);       // Encode data (bits 16-1)      - 16 bits
   }
 
   // Add parity bit (bit 0)
+  Serial.println("encoded Data: " + String(encodedData,BIN));
   encodedData = add_parity(encodedData);
   if (DEBUG) {
-    printBinary( encodedData, shortCommand ? 12 : 24);
+    Serial.println("encoded Data: " + String(encodedData,BIN));
   }
   
   // Send the data
-  irTransmit(encodedData, shortCommand ? 12 : 24);
+  irTransmit(shotCommand, false, encodedData,  shotCommand ? 11 : 21);
 }
 
-void MilesTagTX::irTransmit(unsigned long data, int nbits) {
-  Serial.println("irTransmit" + String(data) + " " + String(nbits));
+void MilesTagTX::irTransmit(bool shotCommand, bool extraData, unsigned long data, int nbits) {
+  Serial.println("irTransmit: Data: " + String(data,BIN) + " Bits " + String(nbits+1));
   // Header
   rmt_item32_t irDataArray[nbits];
-
-  irDataArray[0].duration0 = HEADER_US * DEBUG_SCALE;
-  irDataArray[0].level0 = 1;
-  irDataArray[0].duration1 = SPACE_US * DEBUG_SCALE;
-  irDataArray[0].level1 = 0;
+  if (shotCommand){
+    irDataArray[0].duration0 = SHOT_HEADER_US * DEBUG_SCALE;
+    irDataArray[0].level0 = 1;
+    irDataArray[0].duration1 = SPACE_US * DEBUG_SCALE;
+    irDataArray[0].level1 = 0;
+  } else {
+    irDataArray[0].duration0 = CMD_HEADER_US * DEBUG_SCALE;
+    irDataArray[0].level0 = 1;
+    irDataArray[0].duration1 = SPACE_US * DEBUG_SCALE;
+    irDataArray[0].level1 = 0;
+  }
 
   // Data
   for (int i = 1; i <= nbits; i++) {
@@ -219,23 +227,32 @@ void MilesTagTX::irTransmit(unsigned long data, int nbits) {
       irDataArray[i].level1 = 0;
     }
   }
-  sendIR(irDataArray, nbits + 1, true);
+  if (extraData){
+    irDataArray[nbits+1].duration0 = CMD_EXTRA_US * DEBUG_SCALE;
+    irDataArray[nbits+1].level0 = 1;
+    irDataArray[nbits+1].duration1 = SPACE_US * DEBUG_SCALE;
+    irDataArray[nbits+1].level1 = 0;
+  } else
+  {
+    irDataArray[nbits+1].duration0 = END_US * DEBUG_SCALE;
+    irDataArray[nbits+1].level0 = 1;
+    irDataArray[nbits+1].duration1 = SPACE_US * DEBUG_SCALE;
+    irDataArray[nbits+1].level1 = 0;
+  }
+  sendIR(irDataArray, nbits + 2, true);
 }
 
 /**************************************************************************************************************************************************/
 
 void MilesTagTX::sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone)
 {
-    if(DEBUG)   Serial.println("ESP32_IR::sendIR()");
     rmt_config_t config;
     config.channel = (rmt_channel_t)txRmtPort;
     rmt_write_items(config.channel, data, IRlength, waitTilDone);  //false means non-blocking
     //Wait until sending is done.
     if(waitTilDone)
     {
-        rmt_wait_tx_done(config.channel,1);
-        //before we free the data, make sure sending is already done.
-        //free(data);
+      rmt_wait_tx_done(config.channel,1);
     }
 }
 
@@ -341,7 +358,7 @@ void MilesTagRX::rxConfig(){
   config.mem_block_num = 1; //how many memory blocks 64 x N (0-7)
   config.rx_config.filter_en = 1;
   config.rx_config.filter_ticks_thresh = 100; // 80000000/100 -> 800000 / 100 = 8000  = 125us
-  config.rx_config.idle_threshold = HEADER_US + OFFSET;
+  config.rx_config.idle_threshold = END_US + OFFSET;
   config.clk_div = CLK_DIV;
   ESP_ERROR_CHECK(rmt_config(&config));
   ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
@@ -355,7 +372,7 @@ void MilesTagRX::ClearHits() {
     Hits[i].Quantity = 0;
     Hits[i].Error = true;
   }
-  HitCount = 0;
+  hitCount = 0;
 }
 void MilesTagRX::ClearCommands() {
   for (int i = 0; i < 20; i++) {
@@ -363,7 +380,7 @@ void MilesTagRX::ClearCommands() {
     Commands[i].Data = 0;
     Commands[i].Error = true;
   }
-  CommandCount = 0;
+  commandCount = 0;
 }
 
 bool MilesTagRX::BufferPull()
@@ -392,76 +409,98 @@ bool MilesTagRX::BufferPull()
   // memset(item, 0, sizeof(unsigned int) * 64);
   rmt_item32_t *itemproc = item;
 
-  bool shortCommand = false;
+  bool shotCommand = false;
   int bitNumber = 0;
-  int commandsize = 23;
+  int commandsize = 22;
 
   for (size_t i = 0; i < (rx_size / 4); i++)
   {
+    // uint32_t cpuFreq = getCpuFrequencyMhz();
+    // Serial.print("CPU frequency: ");
+    // Serial.print(cpuFreq);
+    // Serial.println(" MHz");
     // unsigned int markValue = (itemproc->duration0) / 0.0125;
+
     unsigned int markValue = (itemproc->duration0);
+    if (markValue < 100){
+      markValue = (itemproc->duration0) / 0.0125;
+    }
     markValue = ROUND_TO * round((float)markValue / ROUND_TO);
 
     // unsigned int spaceValue = (itemproc->duration1) / 0.0125;
     unsigned int spaceValue = (itemproc->duration1);
+    if (spaceValue < 100){
+      spaceValue = (itemproc->duration1) / 0.0125;
+    }
     spaceValue = ROUND_TO * round((float)spaceValue / ROUND_TO);
 
-    // Serial.println("Item " + String(i) + " - " + String(itemproc->duration0) + "("+String(markValue)+") - " + String(itemproc->duration1));
-
-    if (markValue > (HEADER_US - OFFSET) &&  markValue < (HEADER_US + OFFSET))
+    if (markValue > (SHOT_HEADER_US - OFFSET) &&  markValue < (SHOT_HEADER_US + OFFSET))
     {
+      Serial.println("");
+      Serial.println("**************************************************");
       // Serial.println("Header Received");
+      Serial.println("Shot Command");
       bitNumber = 0;
+      data = 0;
+      shotCommand = true;
+      commandsize = 11;
     }
-    else
+    else if (markValue > (CMD_HEADER_US - OFFSET) &&  markValue < (CMD_HEADER_US + OFFSET))
     {
-      // Check if the first bit after the header is 1 (shortCommand)
-      if (bitNumber == 1)
+      Serial.println("");
+      Serial.println("**************************************************");
+      // Serial.println("Header Received");
+      Serial.println("Long Command");
+      bitNumber = 0;
+      data = 0;
+      shotCommand = false;
+      commandsize = 21;
+    }
+    else if (markValue > (CMD_EXTRA_US - OFFSET) &&  markValue < (CMD_EXTRA_US + OFFSET))
+    {
+      Serial.println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+      Serial.println("");
+    }
+    else if (markValue > (END_US - OFFSET) &&  markValue < (END_US + OFFSET))
+    {
+    if (shotCommand == true)
       {
-        if (markValue > (ZERO_US - OFFSET) && markValue < (ZERO_US + OFFSET))
-        {
-          // Serial.println("**************************************************");
-          // Serial.println("Short Command");
-          shortCommand = true;
-          commandsize = 12;
-        }
+        Serial.println("Shot - " + String(data,BIN));
+        Hits[hitCount] = DecodeShotData(data);
+        // Serial.println("Hitcount before: " + String(hitCount));
+        hitCount++;
+        // Serial.println("Hit Count - " + String(hitCount));
       }
       else
       {
-        // Loop through the bits
-        if (markValue > (ONE_US - OFFSET) && markValue < (ONE_US + OFFSET))
-        {
-          data = data | 1 << (commandsize - bitNumber);
-        }
-        else if (markValue > (ZERO_US - OFFSET) && markValue < (ZERO_US + OFFSET))
-        {
-          data = data | 0 << (commandsize - bitNumber);
-        }
+        Serial.println("Command - " + String(data,BIN));
+        MTCommandData command = DecodeCommandData(data);
+        Commands[commandCount] = command;
+        commandCount++;
+        Serial.println("Command Count - " + String(commandCount));
       }
     }
-    bitNumber++;
-    if (shortCommand && bitNumber%13 == 0)
+    else
     {
-      Serial.println("Shot - " + String(data,BIN));
-      Hits[HitCount] = DecodeShotData(data);
-      // Serial.println("Hitcount before: " + String(HitCount));
-      HitCount++;
-      // Serial.println("Hit Count - " + String(HitCount));
-      data = 0;
-    }
-    else if (bitNumber%23 == 0)
-    {
-      Serial.println("Command - " + String(data,BIN));
-      MTCommandData command = DecodeCommandData(data);
-      if (!command.Error)
+      // Loop through the bits
+      if (markValue > (ONE_US - OFFSET) && markValue < (ONE_US + OFFSET))
       {
-        Commands[CommandCount] = command;
-        CommandCount++;
-        Serial.println("Command Count - " + String(CommandCount));
+        data = data | 1 << (commandsize - bitNumber);
+        // Serial.print("Bit: 1 - "); 
+        // Serial.print("Bit: q - " + String(data,BIN));
       }
-      data = 0;
+      else if (markValue > (ZERO_US - OFFSET) && markValue < (ZERO_US + OFFSET))
+      {
+        data = data | 0 << (commandsize - bitNumber);
+        // Serial.print("Bit: 0 - " + String(data,BIN));
+      }
     }
 
+    // Serial.println("Item " + String(bitNumber) + " - " + String(itemproc->duration0) + "("+String(markValue)+")" );
+
+
+
+    bitNumber++;
     ++itemproc;
   }
   // Serial.println("BufferPull - " + String(data,HEX));
@@ -470,7 +509,7 @@ bool MilesTagRX::BufferPull()
   vRingbufferReturnItem(ringBuf, (void *)item);
 
 
-  Serial.println("**************************************************");
+  // Serial.println("**************************************************");
   return true;
   
   // }
@@ -488,7 +527,7 @@ MTShotRecieved MilesTagRX::DecodeShotData(unsigned long data) {
     if( dataWp & (b << i) ){count++;}
   }
 
-  decodedData.PlayerID = (dataWp & 0x3F) >> 1;
+  decodedData.PlayerID = (dataWp & 0x3F);
   decodedData.Quantity = BintoQuantity((dataWp & 0x3C0) >> 6);
 
   decodedData.Error = false;
@@ -510,9 +549,10 @@ MTShotRecieved MilesTagRX::DecodeShotData(unsigned long data) {
 
 MTCommandData MilesTagRX::DecodeCommandData(unsigned long data) {
   MTCommandData decodedData;
+  Serial.println("Decode Command Data: " + String(data,BIN));
 
   unsigned long dataWp = (data & 0xFFFFFFFE) >> 1;
-
+Serial.println("dataWp Command Data: " + String(dataWp,BIN));
   unsigned long count = 0, i, b = 1;
   for (i = 0; i < 32; i++) {
     if (dataWp & (b << i)) {
@@ -520,14 +560,14 @@ MTCommandData MilesTagRX::DecodeCommandData(unsigned long data) {
     }
   }
 
-  decodedData.Command = (dataWp & 0x3C0000) >> 18;
-  decodedData.Data = (dataWp & 0x3FFFF) >> 1;
+  decodedData.Command = (dataWp & 0xF0000) >> 16;
+  decodedData.Data = (dataWp & 0x0FFFF);
 
   decodedData.Error = false;
   if (has_even_parity(data)) {
     decodedData.Error = true;
   }
-  if (count > 24) {
+  if (count > 22) {
     decodedData.Error = true;
   }
   if (decodedData.Command > 0xf) {
@@ -556,7 +596,7 @@ void MilesTagRX::processCommand(uint16_t command) {
 
 
 unsigned long MilesTagRX::BintoQuantity(unsigned long dmg) {
-  Serial.println("Dmg - " + String(dmg));
+  // Serial.println("Dmg - " + String(dmg));
   unsigned long dmgarray[16] = {1, 2, 4, 5, 7, 10, 15, 17, 20, 25, 30, 35, 40, 50, 75, 100};
   return dmgarray[dmg];
 }
