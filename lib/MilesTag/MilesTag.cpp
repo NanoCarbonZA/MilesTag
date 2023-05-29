@@ -167,7 +167,7 @@ void MilesTagTX::txConfig()
 }
 
 void MilesTagTX::fireShot(unsigned long playerId, unsigned long dmg) {
-   sendCommand(true, QuantitytoBin(dmg), playerId);
+   sendCommand(true, quantitytoBin(dmg), playerId);
 }
 
 void MilesTagTX::sendCommand(bool shotCommand, uint8_t command, uint16_t data) {
@@ -259,7 +259,7 @@ void MilesTagTX::sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone)
 /**************************************************************************************************************************************************/
 
 
-unsigned long MilesTagTX::QuantitytoBin(unsigned long dmg) {
+unsigned long MilesTagTX::quantitytoBin(unsigned long dmg) {
   if (dmg >= 100) {
     dmg = 15;
   } else if (dmg >= 75) {
@@ -366,24 +366,24 @@ void MilesTagRX::rxConfig(){
   rmt_rx_start(config.channel, 1);
 }
 
-void MilesTagRX::ClearHits() {
+void MilesTagRX::clearHits() {
   for (int i = 0; i < 20; i++) {
-    Hits[i].PlayerID = 0;
-    Hits[i].Quantity = 0;
-    Hits[i].Error = true;
+    Hits[i].playerID = 0;
+    Hits[i].quantity = 0;
+    Hits[i].error = true;
   }
   hitCount = 0;
 }
-void MilesTagRX::ClearCommands() {
+void MilesTagRX::clearCommands() {
   for (int i = 0; i < 20; i++) {
-    Commands[i].Command = 0;
-    Commands[i].Data = 0;
-    Commands[i].Error = true;
+    Commands[i].command = 0;
+    Commands[i].data = 0;
+    Commands[i].error = true;
   }
   commandCount = 0;
 }
 
-bool MilesTagRX::BufferPull()
+bool MilesTagRX::bufferPull()
 {
   unsigned long data = 0;
   RingbufHandle_t ringBuf = NULL;
@@ -411,7 +411,6 @@ bool MilesTagRX::BufferPull()
 
   bool shotCommand = false;
   int bitNumber = 0;
-  int commandsize = 22;
 
   for (size_t i = 0; i < (rx_size / 4); i++)
   {
@@ -443,7 +442,6 @@ bool MilesTagRX::BufferPull()
       bitNumber = 0;
       data = 0;
       shotCommand = true;
-      commandsize = 11;
     }
     else if (markValue > (CMD_HEADER_US - OFFSET) &&  markValue < (CMD_HEADER_US + OFFSET))
     {
@@ -454,7 +452,6 @@ bool MilesTagRX::BufferPull()
       bitNumber = 0;
       data = 0;
       shotCommand = false;
-      commandsize = 21;
     }
     else if (markValue > (CMD_EXTRA_US - OFFSET) &&  markValue < (CMD_EXTRA_US + OFFSET))
     {
@@ -466,7 +463,7 @@ bool MilesTagRX::BufferPull()
     if (shotCommand == true)
       {
         Serial.println("Shot - " + String(data,BIN));
-        Hits[hitCount] = DecodeShotData(data);
+        Hits[hitCount] = decodeShotData(data, bitNumber);
         // Serial.println("Hitcount before: " + String(hitCount));
         hitCount++;
         // Serial.println("Hit Count - " + String(hitCount));
@@ -474,8 +471,8 @@ bool MilesTagRX::BufferPull()
       else
       {
         Serial.println("Command - " + String(data,BIN));
-        MTCommandData command = DecodeCommandData(data);
-        Commands[commandCount] = command;
+        
+        Commands[commandCount] = decodeCommandData(data, bitNumber);
         commandCount++;
         Serial.println("Command Count - " + String(commandCount));
       }
@@ -485,13 +482,13 @@ bool MilesTagRX::BufferPull()
       // Loop through the bits
       if (markValue > (ONE_US - OFFSET) && markValue < (ONE_US + OFFSET))
       {
-        data = data | 1 << (commandsize - bitNumber);
+        data = data << 1 | 1;
         // Serial.print("Bit: 1 - "); 
         // Serial.print("Bit: q - " + String(data,BIN));
       }
       else if (markValue > (ZERO_US - OFFSET) && markValue < (ZERO_US + OFFSET))
       {
-        data = data | 0 << (commandsize - bitNumber);
+        data = data << 1 | 0;
         // Serial.print("Bit: 0 - " + String(data,BIN));
       }
     }
@@ -503,7 +500,7 @@ bool MilesTagRX::BufferPull()
     bitNumber++;
     ++itemproc;
   }
-  // Serial.println("BufferPull - " + String(data,HEX));
+  // Serial.println("bufferPull - " + String(data,HEX));
   
   // printBinary(data, 12);
   vRingbufferReturnItem(ringBuf, (void *)item);
@@ -517,64 +514,52 @@ bool MilesTagRX::BufferPull()
 
 
 
-MTShotRecieved MilesTagRX::DecodeShotData(unsigned long data) {
+MTShotRecieved MilesTagRX::decodeShotData(unsigned long data, uint8_t bitCount) {
   MTShotRecieved decodedData;
 
   unsigned long dataWp = (data & 0xFFFFFFFE) >> 1;
 
-  unsigned long count = 0, i, b = 1;
-  for(i = 0; i < 32; i++){
-    if( dataWp & (b << i) ){count++;}
-  }
+  decodedData.playerID = (dataWp & 0x3F);
+  decodedData.quantity = binToQuantity((dataWp & 0x3C0) >> 6);
 
-  decodedData.PlayerID = (dataWp & 0x3F);
-  decodedData.Quantity = BintoQuantity((dataWp & 0x3C0) >> 6);
-
-  decodedData.Error = false;
+  decodedData.error = false;
   if (has_even_parity(data)) {
-    decodedData.Error = true;
+    decodedData.error = true;
   }
-  if (count > 12) {
-    decodedData.Error = true;
+  decodedData.noOfBits = bitCount - 2;  // Remove the 2 extra bits (Parity)
+  if (decodedData.noOfBits != 11) {
+    decodedData.error = true;
   }
-  if (decodedData.Quantity > 100) {
-    decodedData.Error = true;
+  if (decodedData.quantity > 100) {
+    decodedData.error = true;
   }
-  if (decodedData.PlayerID > 63) {
-    decodedData.Error = true;
+  if (decodedData.playerID > 63) {
+    decodedData.error = true;
   }
 
   return decodedData;
 }
 
-MTCommandData MilesTagRX::DecodeCommandData(unsigned long data) {
+MTCommandData MilesTagRX::decodeCommandData(unsigned long data, uint8_t bitCount) {
   MTCommandData decodedData;
-  Serial.println("Decode Command Data: " + String(data,BIN));
 
   unsigned long dataWp = (data & 0xFFFFFFFE) >> 1;
-Serial.println("dataWp Command Data: " + String(dataWp,BIN));
-  unsigned long count = 0, i, b = 1;
-  for (i = 0; i < 32; i++) {
-    if (dataWp & (b << i)) {
-      count++;
-    }
-  }
+  decodedData.command = (dataWp & 0xF0000) >> 16;
+  decodedData.data = (dataWp & 0x0FFFF);
 
-  decodedData.Command = (dataWp & 0xF0000) >> 16;
-  decodedData.Data = (dataWp & 0x0FFFF);
-
-  decodedData.Error = false;
+  decodedData.error = false;
   if (has_even_parity(data)) {
-    decodedData.Error = true;
+    decodedData.error = true;
   }
-  if (count > 22) {
-    decodedData.Error = true;
+  decodedData.noOfBits = bitCount - 2;  // Remove the 2 extra bits (Parity and Stop)
+  if (decodedData.noOfBits != 20) {
+    decodedData.error = true;
   }
-  if (decodedData.Command > 0xf) {
-    decodedData.Error = true;
+  if (decodedData.command > 0xf) {
+    decodedData.error = true;
   }
-  if (decodedData.Data > 0xffff) {
-    decodedData.Error = true;
+  if (decodedData.data > 0xffff) {
+    decodedData.error = true;
   }
 
   return decodedData;
@@ -595,7 +580,7 @@ void MilesTagRX::processCommand(uint16_t command) {
 }
 
 
-unsigned long MilesTagRX::BintoQuantity(unsigned long dmg) {
+unsigned long MilesTagRX::binToQuantity(unsigned long dmg) {
   // Serial.println("Dmg - " + String(dmg));
   unsigned long dmgarray[16] = {1, 2, 4, 5, 7, 10, 15, 17, 20, 25, 30, 35, 40, 50, 75, 100};
   return dmgarray[dmg];

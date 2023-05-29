@@ -288,7 +288,7 @@ class MilesTagTX
 
   private:
     void irTransmit(bool shotCommand, bool extraData, unsigned long Buffer, int nbits);
-    unsigned long QuantitytoBin(unsigned long dmg);
+    unsigned long quantitytoBin(unsigned long dmg);
     unsigned long has_even_parity(unsigned long x);
     unsigned long add_parity(unsigned long x);
 
@@ -297,15 +297,17 @@ class MilesTagTX
 };
 
 typedef struct MTShotRecieved {
-  unsigned long Quantity;
-  unsigned long PlayerID;
-  bool Error = true;
+  unsigned long noOfBits;
+  unsigned long quantity;
+  unsigned long playerID;
+  bool error = true;
 } MTShotRecieved;
 
 typedef struct {
-  uint8_t Command;
-  uint16_t Data;
-  bool Error;
+  unsigned long noOfBits;
+  uint8_t command;
+  uint32_t data;
+  bool error;
 } MTCommandData;
 
 class MilesTagRX
@@ -318,18 +320,18 @@ class MilesTagRX
     int readIR();
     void decodeRAW(rmt_item32_t *rawDataIn, int numItems, unsigned int *irDataOut);
     void getDataIR(rmt_item32_t item, unsigned int* irDataOut, int index);
-    MTShotRecieved DecodeShotData(unsigned long data);
-    MTCommandData DecodeCommandData(unsigned long data);
+    MTShotRecieved decodeShotData(unsigned long data, uint8_t bitCount);
+    MTCommandData decodeCommandData(unsigned long data, uint8_t bitCount);
     void processCommand(uint16_t command);
-    void ClearHits();
-    void ClearCommands();
-    bool BufferPull();
+    void clearHits();
+    void clearCommands();
+    bool bufferPull();
     MTShotRecieved Hits[20];
     MTCommandData Commands[20];
     int hitCount = 0;
     int commandCount = 0;
   private:
-    unsigned long BintoQuantity(unsigned long dmg);
+    unsigned long binToQuantity(unsigned long dmg);
     unsigned long has_even_parity(unsigned long x);
     int             rxGpioNum;
     int             rxRmtPort;    
