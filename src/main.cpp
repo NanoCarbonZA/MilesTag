@@ -25,7 +25,7 @@ void loop()
       Serial.print(" Error: ");
       Serial.print(tagger.Hits[numberOfHits].error);
       Serial.print(" Player: ");
-      Serial.print(tagger.Hits[numberOfHits].playerID);
+      Serial.print(tagger.Hits[numberOfHits].playerId);
       Serial.print(" quantity: ");
       Serial.print(tagger.Hits[numberOfHits].quantity);
       Serial.print(" No Of Bits: ");

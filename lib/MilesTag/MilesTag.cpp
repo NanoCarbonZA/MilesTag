@@ -170,7 +170,7 @@ void MilesTagTX::fireShot(unsigned long playerId, unsigned long dmg) {
    sendCommand(true, quantitytoBin(dmg), playerId);
 }
 
-void MilesTagTX::sendCommand(bool shotCommand, uint8_t command, uint16_t data) {
+void MilesTagTX::sendCommand(bool shotCommand, uint8_t command, uint64_t data) {
   unsigned long encodedData = 0;
   Serial.println("sendCommand");
   if (shotCommand) {
@@ -368,7 +368,7 @@ void MilesTagRX::rxConfig(){
 
 void MilesTagRX::clearHits() {
   for (int i = 0; i < 20; i++) {
-    Hits[i].playerID = 0;
+    Hits[i].playerId = 0;
     Hits[i].quantity = 0;
     Hits[i].error = true;
   }
@@ -507,7 +507,11 @@ bool MilesTagRX::bufferPull()
 
 
   // Serial.println("**************************************************");
-  return true;
+  if (commandCount > 0 || hitCount > 0){
+    return true;
+  } else {
+    return false;
+  }
   
   // }
 }
@@ -519,7 +523,7 @@ MTShotRecieved MilesTagRX::decodeShotData(unsigned long data, uint8_t bitCount) 
 
   unsigned long dataWp = (data & 0xFFFFFFFE) >> 1;
 
-  decodedData.playerID = (dataWp & 0x3F);
+  decodedData.playerId = (dataWp & 0x3F);
   decodedData.quantity = binToQuantity((dataWp & 0x3C0) >> 6);
 
   decodedData.error = false;
@@ -533,7 +537,7 @@ MTShotRecieved MilesTagRX::decodeShotData(unsigned long data, uint8_t bitCount) 
   if (decodedData.quantity > 100) {
     decodedData.error = true;
   }
-  if (decodedData.playerID > 63) {
+  if (decodedData.playerId > 63) {
     decodedData.error = true;
   }
 
@@ -549,16 +553,20 @@ MTCommandData MilesTagRX::decodeCommandData(unsigned long data, uint8_t bitCount
 
   decodedData.error = false;
   if (has_even_parity(data)) {
+    Serial.println("Parity Error");
     decodedData.error = true;
   }
   decodedData.noOfBits = bitCount - 2;  // Remove the 2 extra bits (Parity and Stop)
   if (decodedData.noOfBits != 20) {
+    Serial.println("Bit Count - " + String(decodedData.noOfBits));
     decodedData.error = true;
   }
   if (decodedData.command > 0xf) {
+    Serial.println("Command - " + String(decodedData.command));
     decodedData.error = true;
   }
   if (decodedData.data > 0xffff) {
+    Serial.println("Data - " + String(decodedData.data));
     decodedData.error = true;
   }
 

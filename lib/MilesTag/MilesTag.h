@@ -283,7 +283,7 @@ class MilesTagTX
     bool SetTx(int _txPin, int _channel);
     void txConfig();
     void fireShot(unsigned long playerId, unsigned long dmg);
-    void sendCommand(bool shotCommand, uint8_t command, uint16_t data);
+    void sendCommand(bool shotCommand, uint8_t command, uint64_t data);
     void sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone);
 
   private:
@@ -299,7 +299,7 @@ class MilesTagTX
 typedef struct MTShotRecieved {
   unsigned long noOfBits;
   unsigned long quantity;
-  unsigned long playerID;
+  unsigned long playerId;
   bool error = true;
 } MTShotRecieved;
 
