@@ -13,19 +13,24 @@ typedef unsigned short ushort;
 namespace game_management
 {
 
-  //*********************************************************************************************//
+/****************************************************************************************************************************************************************************************/
+
   enum class GAMEMODES
   {
     FREE_FOR_ALL,
     TEAM_DEATH_MATCH,
     CONQUEST,
-    DOMINATION
+    DOMINATION,
+    TEAM_DOMINATION
   };
   static std::map<GAMEMODES, std::pair<String, bool>> GameModes = {
       {GAMEMODES::FREE_FOR_ALL, {"FREE_FOR_ALL", false}},
       {GAMEMODES::TEAM_DEATH_MATCH, {"TEAM_DEATH_MATCH", true}},
       {GAMEMODES::CONQUEST, {"CONQUEST", true}},
-      {GAMEMODES::DOMINATION, {"DOMINATION", true}}};
+      {GAMEMODES::DOMINATION, {"DOMINATION", true}},
+      {GAMEMODES::TEAM_DOMINATION, {"TEAM_DOMINATION", true}}};
+
+/****************************************************************************************************************************************************************************************/
 
   enum class LAUNCHTRIGGER
   {
@@ -38,31 +43,31 @@ namespace game_management
       {LAUNCHTRIGGER::SPAWNPOINT, "SPAWNPOINT"},
       {LAUNCHTRIGGER::UNKNOWN_LAUNCHTRIGGER, "UNKNOWN_LAUNCHTRIGGER"}};
 
+/****************************************************************************************************************************************************************************************/
 
+  enum class IRSIGNALTYPE
+  {
+    TAG,
+    UNTAG,
+    GRENADE,
+    AMMUNITION,
+    MEDKIT,
+    BASE,
+    SPAWNPOINT,
+    CAPTUREPOINT
+  };
 
-enum class IRSIGNALTYPE
-{
-  TAG,
-  UNTAG,
-  GRENADE,
-  AMMUNITION,
-  MEDKIT,
-  BASE,
-  SPAWNPOINT,
-  CAPTUREPOINT
-};
+  static std::map<IRSIGNALTYPE, String> IrSignalType = {
+      {IRSIGNALTYPE::TAG, "TAG"},
+      {IRSIGNALTYPE::UNTAG, "UNTAG"},
+      {IRSIGNALTYPE::GRENADE, "GRENADE"},
+      {IRSIGNALTYPE::AMMUNITION, "AMMUNITION"},
+      {IRSIGNALTYPE::MEDKIT, "MEDKIT"},
+      {IRSIGNALTYPE::BASE, "BASE"},
+      {IRSIGNALTYPE::SPAWNPOINT, "SPAWNPOINT"},
+      {IRSIGNALTYPE::CAPTUREPOINT, "CAPTUREPOINT"}};
 
-
-static std::map<IRSIGNALTYPE, String> IrSignalType = {
-    {IRSIGNALTYPE::TAG, "TAG"},
-    {IRSIGNALTYPE::UNTAG, "UNTAG"},
-    {IRSIGNALTYPE::GRENADE, "GRENADE"},
-    {IRSIGNALTYPE::AMMUNITION, "AMMUNITION"},
-    {IRSIGNALTYPE::MEDKIT, "MEDKIT"},
-    {IRSIGNALTYPE::BASE, "BASE"},
-    {IRSIGNALTYPE::SPAWNPOINT, "SPAWNPOINT"},
-    {IRSIGNALTYPE::CAPTUREPOINT, "CAPTUREPOINT"}};
-
+/****************************************************************************************************************************************************************************************/
 
   enum class DEVICETYPE
   {
@@ -79,6 +84,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       {DEVICETYPE::INGAME, "INGAME"},
       {DEVICETYPE::UNKNOWN_DEVIDE, "UNKNOWN_DEVIDE"}};
 
+/****************************************************************************************************************************************************************************************/
+
   enum class STOPTRIGGER
   {
     TIME,
@@ -87,6 +94,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
   static std::map<STOPTRIGGER, String> StopTriggers = {
       {STOPTRIGGER::TIME, "TIME"},
       {STOPTRIGGER::SCORE, "SCORE"}};
+
+/****************************************************************************************************************************************************************************************/
 
   enum class WEAPONTYPE
   {
@@ -107,24 +116,46 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       {WEAPONTYPE::SUBMACHINEGUN, "SUBMACHINEGUN"},
       {WEAPONTYPE::MACHINEGUN, "MACHINEGUN"}};
 
+/****************************************************************************************************************************************************************************************/
+
+  enum class DEVICESTATUS
+  {
+    UNASSIGNED,
+    REGISTERED,
+    ACTIVE,
+    INACTIVE,
+    SENDING,
+    RELOADING
+  };
+
+  static std::map<DEVICESTATUS, String> DeviceStatus = {
+      {DEVICESTATUS::UNASSIGNED, "UNASSIGNED"},
+      {DEVICESTATUS::REGISTERED, "REGISTERED"},
+      {DEVICESTATUS::ACTIVE, "ACTIVE"},
+      {DEVICESTATUS::INACTIVE, "INACTIVE"},
+      {DEVICESTATUS::SENDING, "SENDING"},
+      {DEVICESTATUS::RELOADING, "RELOADING"}};
+
+/****************************************************************************************************************************************************************************************/
+
   enum class GAMESTATE
   {
     SETUP,
     SETUP_COMPLETE,
     RUNNING,
     PAUSED,
-    STOPPED,
-    EVALUATION,
+    RESUME,
     GAMEOVER
   };
   static std::map<GAMESTATE, String> GameStates = {
       {GAMESTATE::SETUP, "SETUP"},
-      {GAMESTATE::SETUP, "SETUP_COMPLETE"},
+      {GAMESTATE::SETUP_COMPLETE, "SETUP_COMPLETE"},
       {GAMESTATE::RUNNING, "RUNNING"},
       {GAMESTATE::PAUSED, "PAUSED"},
-      {GAMESTATE::STOPPED, "STOPPED"},
-      {GAMESTATE::EVALUATION, "EVALUATION"},
+      {GAMESTATE::RESUME, "RESUME"},
       {GAMESTATE::GAMEOVER, "GAMEOVER"}};
+
+/****************************************************************************************************************************************************************************************/
 
   enum class PLAYERSTATE
   {
@@ -137,6 +168,7 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
     STARTED, // HQ have sent the start message (gameStart)
     PAUSED,
     ALIVE,
+    HURT,
     DEAD_COOLDOWN,
     DEAD,
     RESPAWNING,
@@ -154,6 +186,7 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       {PLAYERSTATE::STARTED, "STARTED"},
       {PLAYERSTATE::PAUSED, "PAUSED"},
       {PLAYERSTATE::ALIVE, "ALIVE"},
+      {PLAYERSTATE::HURT, "HURT"},
       {PLAYERSTATE::DEAD_COOLDOWN, "DEAD_COOLDOWN"},
       {PLAYERSTATE::DEAD, "DEAD"},
       {PLAYERSTATE::RESPAWNING, "RESPAWNING"},
@@ -161,15 +194,18 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       {PLAYERSTATE::EVALUATING, "EVALUATING"},
       {PLAYERSTATE::EVALUATED, "EVALUATED"}};
 
+/****************************************************************************************************************************************************************************************/
+
   struct Player
   {
     uint32_t playerId = 999;
     uint32_t team = 1;
     String name = "";
     PLAYERSTATE state = PLAYERSTATE::DETACHED;
+    PLAYERSTATE previousState;
     uint32_t playerAddr = 0;
     std::vector<uint32_t> weaponAddrs = {};
-    
+
     uint32_t score = 0;   // score of player
     uint32_t kills = 0;   // amount of kills
     uint32_t deaths = 0;  // amount of deaths
@@ -183,27 +219,27 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
     int health = 100;
     bool health_changed = false;
 
-    uint32_t respawnOffset;    // How many seconds the weapon activation is delayed (for local) or prior (for beacon) to the respawn
-    bool localRespawn = false; // allow local respawn
-    uint32_t respawnDelay = 5; // How many seconds a player must wait before being able to respawn
+    bool localRespawn = true; // allow local respawn
+    // There is an issue with the activation and dea=ctivationg of the respawn. It require longer time for response.
+    // Will have to see how to decreate the response time
+    // Maybe use bluetooth to send the signal to the weapon
+    uint32_t respawnDelay = 7; // How many seconds a player must wait before being able to respawn
+    uint32_t spawnTime = 0;    // time stamp of last respawn;
 
-    uint32_t deathTime = 0;  // time stamp of last death
-    uint32_t deathTimeout = 0;  // delay before respawn is possible
-    
-    uint32_t spawnDelay = 0; // invulnerability after last respawn
-    uint32_t spawnTime = 0; // time stamp of last respawn;
-    
+    uint32_t deathTime = 0;    // time stamp of last death
+    uint32_t deathTimeout = 5; // delay before respawn is possible
+
     // Default constructor
     Player() = default;
 
     // Constructor
-    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _state, uint32_t _playerAddr, std::vector<uint32_t> _weaponAddrs, uint32_t _score, uint32_t _kills, uint32_t _deaths, uint32_t _cpoint, uint32_t _assists, uint32_t _maxHealth, uint32_t _minHealth, uint32_t _respawnOffset, bool _localRespawn, uint32_t _respawnDelay)
+    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _state, uint32_t _playerAddr, std::vector<uint32_t> _weaponAddrs, uint32_t _score, uint32_t _kills, uint32_t _deaths, uint32_t _cpoint, uint32_t _assists, uint32_t _maxHealth, uint32_t _minHealth, bool _localRespawn, uint32_t _respawnDelay)
         : playerId(_playerId), team(_team), name(_name), state(_state), playerAddr(_playerAddr), weaponAddrs(_weaponAddrs), score(_score), kills(_kills), deaths(_deaths), cpoint(_cpoint), assists(_assists),
-          maxHealth(_maxHealth), minHealth(_minHealth), respawnOffset(_respawnOffset), localRespawn(_localRespawn), respawnDelay(_respawnDelay) {}
+          maxHealth(_maxHealth), minHealth(_minHealth), localRespawn(_localRespawn), respawnDelay(_respawnDelay) {}
 
     // Add a constructor to initialize the Player object
     Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _state, uint32_t _playerAddr)
-        : playerId(_playerId), team(_team), name(_name), state(_state), playerAddr(_playerAddr), weaponAddrs({}), score(0), kills(0), deaths(0), cpoint(0), assists(0), maxHealth(100), minHealth(0), respawnOffset(0), localRespawn(false), respawnDelay() {}
+        : playerId(_playerId), team(_team), name(_name), state(_state), playerAddr(_playerAddr) {}
 
     void setState(String stateName)
     {
@@ -235,7 +271,6 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       }
     }
 
-
     bool healthChanged()
     {
       if (health_changed)
@@ -247,22 +282,24 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
     }
   };
 
+/****************************************************************************************************************************************************************************************/
+
   struct GameSetup
   {
-    GAMEMODES gameMode = GAMEMODES::TEAM_DEATH_MATCH;
+    GAMEMODES gameMode = GAMEMODES::FREE_FOR_ALL;
     GAMESTATE gameState = GAMESTATE::SETUP;
     uint32_t gameStartTime = 0;
     bool teamBased = true;
     uint32_t teams = 2;
     std::vector<int> teamScore = {};
-    bool friendlyFire = true;
+    bool friendlyFire = false;
     uint32_t playerCount = 0;
     uint32_t playerId = 999;
     std::map<uint32_t, Player> players = std::map<uint32_t, Player>();
     LAUNCHTRIGGER launchTrigger = LAUNCHTRIGGER::TIMER;
     uint32_t launchTime = 0;
-    STOPTRIGGER stopTrigger = STOPTRIGGER::TIME;
-    uint32_t stopLimit = 1000;
+    STOPTRIGGER stopTrigger = STOPTRIGGER::SCORE;
+    uint32_t stopLimit = 40;
     uint32_t killMultiplier = 10;
     uint32_t assistMultiplier = 5;
     uint32_t gameModePoints = 0;
@@ -285,16 +322,22 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
           launchTrigger(_launchTrigger), launchTime(_launchTime), stopTrigger(_stopTrigger), stopLimit(600),
           killMultiplier(10), assistMultiplier(5), gameModePoints(5), conquestPoints(0), extendedUpdates(true) {}
 
+    /****************************************************************************************************************************************************************************************/
+
     String getGameMode()
     {
       return GameModes[gameMode].first;
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void setGameMode(GAMEMODES _gameMode)
     {
       gameMode = _gameMode;
       teamBased = GameModes[_gameMode].second;
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void setGameMode(String modeName)
     {
@@ -308,6 +351,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
         }
       }
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     String getGameState()
     {
@@ -326,10 +371,14 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       }
     }
 
+    /****************************************************************************************************************************************************************************************/
+
     String getLaunchTrigger()
     {
       return LaunchTriggers[launchTrigger];
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void setLaunchTrigger(String triggerName)
     {
@@ -343,34 +392,42 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       }
     }
 
+    /****************************************************************************************************************************************************************************************/
+
     bool isEnemy(int offenderID)
     {
-        if (player && players.find(offenderID) != players.end()) 
-        {
-            return player->team != players[offenderID].team;
-        }
-        // Handle the case where one or both players don't exist
-        // Return a default value or throw an exception, depending on your requirements
-        return true; // Default value
+      if (player && players.find(offenderID) != players.end())
+      {
+        return player->team != players[offenderID].team;
+      }
+      // Handle the case where one or both players don't exist
+      // Return a default value or throw an exception, depending on your requirements
+      return true; // Default value
     }
 
-    void printPlayerStats() {
-        //debug
-        Serial.println("Player absolute score:\n id\tscore\tkills\tassists\tdeaths");
+    /****************************************************************************************************************************************************************************************/
 
-        for (const auto& playerPair : players) {
-            const Player& player = playerPair.second;
-            Serial.println(String(player.playerId) + "\t" + 
-                          String(player.score) + "\t" + 
-                          String(player.kills) + "\t" + 
-                          String(player.assists) + "\t" + 
-                          String(player.deaths));
-        }
-    } 
-
-    Player parsePlayerJosn(String playerJson)
+    void printPlayerStats()
     {
-      DynamicJsonDocument doc(1024);
+      // debug
+      Serial.println("Player absolute score:\n id\tscore\tkills\tassists\tdeaths");
+
+      for (const auto &playerPair : players)
+      {
+        const Player &player = playerPair.second;
+        Serial.println(String(player.playerId) + "\t" +
+                       String(player.score) + "\t" +
+                       String(player.kills) + "\t" +
+                       String(player.assists) + "\t" +
+                       String(player.deaths));
+      }
+    }
+
+    /****************************************************************************************************************************************************************************************/
+
+    Player parsePlayerJson(String playerJson)
+    {
+      JsonDocument doc;
       deserializeJson(doc, playerJson);
 
       // Create a new Player object
@@ -437,10 +494,6 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
         {
           newPlayer.health = doc["health"];
         }
-        if (doc.containsKey("respawnOffset"))
-        {
-          newPlayer.respawnOffset = doc["respawnOffset"];
-        }
         if (doc.containsKey("localRespawn"))
         {
           newPlayer.localRespawn = doc["localRespawn"];
@@ -463,12 +516,16 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
     {
       return players[playerId].state;
     }
-
+    
+    /****************************************************************************************************************************************************************************************/
+    
     void setPlayer(uint32_t playerId)
     {
       this->playerId = playerId;     // Set the player ID
       player = &(players[playerId]); // Set the player pointer
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void saveGameSetup()
     {
@@ -500,7 +557,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       // Save each player's data
       for (const auto &player : players)
       {
-        String baseKey = "P" + String(player.first) + "_";
+        String baseKey = "P" + String(player.first);
+        Serial.println("Saving player " + baseKey);
         preferences.putUInt((baseKey + "playerId").c_str(), player.second.playerId);
         preferences.putUInt((baseKey + "team").c_str(), player.second.team);
         preferences.putString((baseKey + "name").c_str(), player.second.name.c_str());
@@ -513,7 +571,6 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
         preferences.putUInt((baseKey + "assists").c_str(), player.second.assists);
         preferences.putInt((baseKey + "maxHealth").c_str(), player.second.maxHealth);
         preferences.putInt((baseKey + "minHealth").c_str(), player.second.minHealth);
-        preferences.putUInt((baseKey + "spwOffset").c_str(), player.second.respawnOffset);
         preferences.putBool((baseKey + "localspw").c_str(), player.second.localRespawn);
         preferences.putUInt((baseKey + "spwDelay").c_str(), player.second.respawnDelay);
         String weaponAddrsStr = "";
@@ -528,6 +585,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       preferences.end();
       Serial.println("Game setup saved");
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void loadGameSetup()
     {
@@ -576,22 +635,30 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
         player.minHealth = preferences.getInt((playerKey + "minHealth").c_str(), 0);
         player.health = preferences.getInt((playerKey + "health").c_str(), 100);
         player.health_changed = preferences.getBool((playerKey + "hltChang").c_str(), false);
-        player.respawnOffset = preferences.getUInt((playerKey + "spwOffset").c_str(), 0);
         player.localRespawn = preferences.getBool((playerKey + "localSpw").c_str(), false);
         player.respawnDelay = preferences.getUInt((playerKey + "spwDelay").c_str(), 0);
         player.deathTime = preferences.getUInt((playerKey + "deathTime").c_str(), 0);
-        player.spawnDelay = preferences.getUInt((playerKey + "spwDelay").c_str(), 0);
         player.spawnTime = preferences.getUInt((playerKey + "spwTime").c_str(), 0);
         player.deathTimeout = preferences.getUInt((playerKey + "deathTimeout").c_str(), 0);
 
         String weaponAddrsStr = preferences.getString((playerKey + "WpnAddrs").c_str(), "").c_str();
+        Serial.println("Weapon addresses: " + weaponAddrsStr);
         std::vector<uint32_t> weaponAddrs;
         int pos = 0;
         while ((pos = weaponAddrsStr.indexOf(',')) >= 0)
         {
-          player.weaponAddrs.push_back(weaponAddrsStr.substring(0, pos).toInt());
+          String addrStr = weaponAddrsStr.substring(0, pos);
+          uint32_t addr = strtoul(addrStr.c_str(), NULL, 10);
+          player.weaponAddrs.push_back(addr);
+          Serial.println("Weapon address: " + String(addr));
           weaponAddrsStr.remove(0, pos + 1);
         }
+        if (weaponAddrsStr.length() > 0) {
+          uint32_t addr = strtoul(weaponAddrsStr.c_str(), NULL, 10);
+          player.weaponAddrs.push_back(addr);
+          Serial.println("Weapon address: " + weaponAddrsStr);
+        }
+        Serial.println("Player ID: " + String(player.playerId) + " Number of weapon Addresses: " + String(player.weaponAddrs.size()));
 
         players[player.playerId] = player;
       }
@@ -599,6 +666,8 @@ static std::map<IRSIGNALTYPE, String> IrSignalType = {
       preferences.end();
       Serial.println("Game setup loaded");
     }
+
+    /****************************************************************************************************************************************************************************************/
 
     void resetGameSetup()
     {

@@ -355,7 +355,7 @@ void MilesTagRX::rxConfig(){
   config.channel = (rmt_channel_t)rxRmtPort;
   config.gpio_num = (gpio_num_t)rxGpioNum;
   gpio_pullup_en((gpio_num_t)rxGpioNum);
-  config.mem_block_num = 1; //how many memory blocks 64 x N (0-7)
+  config.mem_block_num = 2; //how many memory blocks 64 x N (0-7)
   config.rx_config.filter_en = 1;
   config.rx_config.filter_ticks_thresh = 100; // 80000000/100 -> 800000 / 100 = 8000  = 125us
   config.rx_config.idle_threshold = END_US + OFFSET;
@@ -531,7 +531,7 @@ MTShotRecieved MilesTagRX::decodeShotData(unsigned long data, uint8_t bitCount) 
     decodedData.error = true;
   }
   decodedData.noOfBits = bitCount - 2;  // Remove the 2 extra bits (Parity)
-  if (decodedData.noOfBits != 11) {
+  if (decodedData.noOfBits != 10) {
     decodedData.error = true;
   }
   if (decodedData.quantity > 100) {
