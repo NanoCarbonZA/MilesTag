@@ -1,11 +1,13 @@
 /*
 Copyright <2018> <Ethan Johnston>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #ifndef MilesTag_h
 #define MilesTag_h
@@ -17,16 +19,15 @@ extern "C" {
 #include <stdint.h>
 #include "esp32-hal.h"
 // #include "esp_intr.h"
-#include "esp_intr_alloc.h"
 #include "driver/gpio.h"
-#include "driver/rmt.h"
 #include "driver/periph_ctrl.h"
+#include "driver/rmt.h"
+#include "esp_intr_alloc.h"
 #include "freertos/semphr.h"
 #include "soc/rmt_struct.h"
 
 #ifdef __cplusplus
 }
-
 
 #endif
 
@@ -44,7 +45,7 @@ extern "C" {
 // std::map<String, Command> commandMap = {
 //   { "AddHealth", {"Add Health 1 to 100", 0x80, 0x01, 0xE8} },
 //   { "AddRounds", {"Add Rounds 1 to 100", 0x81, 0x01, 0xE8} },
-//   { "RESERVED_82", {"RESERVED_82", 0x82,0x00,0x00}},  
+//   { "RESERVED_82", {"RESERVED_82", 0x82,0x00,0x00}},
 //   { "AdminKill", {"Admin Kill", 0x83, 0x00, 0xE8} },
 //   { "PauseUnpause", {"Pause/Unpause", 0x83, 0x01, 0xE8} },
 //   { "StartGame", {"Start Game", 0x83, 0x02, 0xE8} },
@@ -74,69 +75,59 @@ extern "C" {
 //   { "RESERVED_86", {"RESERVED_86", 0x86,0x00,0x00}},
 //   { "SystemData_87_00", {"System Data 87 Reserved 00", 0x87,0x00,0x00}},
 //   { "CloningData", {"Cloning Data", 0x87,0x01,0x00}},
-//   { "ScoreData1", {"Score Data (pt 1)", 0x87,0x03,0x00}},                                                         //This scoring data provided in this packet shows all the player specific data. 
+//   { "ScoreData1", {"Score Data (pt 1)", 0x87,0x03,0x00}},                                                         //This scoring data provided in this packet shows all the player specific data.
 //   { "ScoreData2", {"Score Data (pt 2)", 0x87,0x04,0x00}},                                                         //This scoring data provided in this packet shows all hits that were recieved by the player.
-//   { "ScoreData3", {"Score Data (pt 3)", 0x87,0x05,0x00}},                                                         //This scoring data provided in this packet shows hits from the same colour team (traitor shots) that were recieved by the player.
-//   { "RESERVED_88", {"RESERVED_88", 0x88,0x00,0x00}},
-//   { "RESERVED_89", {"RESERVED_89", 0x89,0x00,0x00}},
-//   { "PickupClipsBox", {"Pickup Clips Box, quantity 0 to 15", 0x8A, 0x00, 0xE8} },
-//   { "PickupHealthBox", {"Pickup Health Box, quantity 0 to 15", 0x8B, 0x00, 0xE8} },
-//   { "FlagPickup", {"Flag Pickup, Flag ID 0 to 15", 0x8C, 0x00, 0xE8} },
-//   { "RadiationZoneRemoveHealth", {"Radiation Zone remove Health 1 to 100", 0xA0,0x00, 0xE8} },
-//   { "AnomalyZoneAddHealth", {"Anomaly Zone Add Health 1 to 100", 0xA1, 0x01, 0xE8} },
-//   { "SetGameMode", {"Set Game Mode", 0xA8, 0x00, 0xE8} },
-//   { "SetTeamID", {"Set Team ID 0 to 3", 0xA9, 0x00, 0xE8} },
-//   { "AddOrRemoveRedMemberHealth", {"Add or Remove Red member Health -128 to 127", 0xB0, 0x00, 0xE8} },
-//   { "AddOrRemoveBlueMemberHealth", {"Add or Remove Blue member Health -128 to 127", 0xB1, 0x00, 0xE8} },
-//   { "AddOrRemoveYellowMemberHealth", {"Add or Remove Yellow member Health -128 to 127", 0xB2, 0x00, 0xE8} },
-//   { "AddOrRemoveGreenMemberHealth", {"Add or Remove Green member Health -128 to 127", 0xB3, 0x00, 0xE8} },
-//   { "RespawnTeamMember", {"Respawn Team member ID 0 to 4", 0xB4, 0x00, 0xE8} },
-//   { "KillTeamMember", {"Kill Team member ID 0 to 4", 0xB6, 0x00, 0xE8} },
-//   { "FullAmmoTeamMember", {"Full Ammo Team member ID 0 to 4", 0xB7, 0x00, 0xE8} }
+//   { "ScoreData3", {"Score Data (pt 3)", 0x87,0x05,0x00}},                                                         //This scoring data provided in this packet shows hits from the same colour team (traitor shots) that were recieved by the
+//   player. { "RESERVED_88", {"RESERVED_88", 0x88,0x00,0x00}}, { "RESERVED_89", {"RESERVED_89", 0x89,0x00,0x00}}, { "PickupClipsBox", {"Pickup Clips Box, quantity 0 to 15", 0x8A, 0x00, 0xE8} }, { "PickupHealthBox", {"Pickup Health Box,
+//   quantity 0 to 15", 0x8B, 0x00, 0xE8} }, { "FlagPickup", {"Flag Pickup, Flag ID 0 to 15", 0x8C, 0x00, 0xE8} }, { "RadiationZoneRemoveHealth", {"Radiation Zone remove Health 1 to 100", 0xA0,0x00, 0xE8} }, { "AnomalyZoneAddHealth",
+//   {"Anomaly Zone Add Health 1 to 100", 0xA1, 0x01, 0xE8} }, { "SetGameMode", {"Set Game Mode", 0xA8, 0x00, 0xE8} }, { "SetTeamID", {"Set Team ID 0 to 3", 0xA9, 0x00, 0xE8} }, { "AddOrRemoveRedMemberHealth", {"Add or Remove Red member
+//   Health -128 to 127", 0xB0, 0x00, 0xE8} }, { "AddOrRemoveBlueMemberHealth", {"Add or Remove Blue member Health -128 to 127", 0xB1, 0x00, 0xE8} }, { "AddOrRemoveYellowMemberHealth", {"Add or Remove Yellow member Health -128 to 127",
+//   0xB2, 0x00, 0xE8} }, { "AddOrRemoveGreenMemberHealth", {"Add or Remove Green member Health -128 to 127", 0xB3, 0x00, 0xE8} }, { "RespawnTeamMember", {"Respawn Team member ID 0 to 4", 0xB4, 0x00, 0xE8} }, { "KillTeamMember", {"Kill Team
+//   member ID 0 to 4", 0xB6, 0x00, 0xE8} }, { "FullAmmoTeamMember", {"Full Ammo Team member ID 0 to 4", 0xB7, 0x00, 0xE8} }
 // };
 
 // For cloning, much more data is required to be sent. A further 36 bytes is sent
 // after the 0xE8 byte to mark the end of the message.
 // This table starts from byte 4, which is the first byte sent after the 0xE8.
 
-//Cloning data
-// Byte number Description of data
-// 4 Reserved
-// 5 Reserved
-// 6 Reserved
-// 7 Team ID - See section 2.3.1
-// 8 Reserved
-// 9 Clips added by picking up an ammo box
-// 10 Health added by picking up a medic box
-// 11 Reserved (0x03 for 5.41)
-// 12 Hit LED timeout in seconds
-// 13 Sound set - See section 2.3.2
-// 14 Overheat limit in rounds/min
-// 15 Reserved
-// 16 Reserved
-// 17 Damage per shot - See section 2.3.3
-// 18 Clip size - 0xFF is unlimited
-// 19 Number of clips - 0xCA is unlimited
-// 20 Fire selector - See 2.3.4
-// 21 Number of rounds for burst mode
-// 22 Cyclic RPM - See 2.3.5
-// 23 Reload delay in seconds
-// 24 IR power - See 2.3.6
-// 25 IR range - See 2.3.7
-// 26 Tagger on/off settings - See 2.3.8
-// 27 Respawn health - See 2.3.9
-// 28 Reserved
-// 29 Respawn delay in tens of seconds
-// 30 Armour value
-// 31 Game on/off settings 1/2 - See 2.3.10
-// 32 Game on/off settings 2/2 - See 2.3.11
-// 33 Hit delay - See 2.3.12
-// 34 Start delay in seconds
-// 35 Death delay in seconds
-// 36 Time limit in minutes
-// 37 Maximum respawns
-// 38 Reserved (0xFF in 5.41)
-// 39 Checksum - See 2.3.13
+// Cloning data
+//  Byte number Description of data
+//  4 Reserved
+//  5 Reserved
+//  6 Reserved
+//  7 Team ID - See section 2.3.1
+//  8 Reserved
+//  9 Clips added by picking up an ammo box
+//  10 Health added by picking up a medic box
+//  11 Reserved (0x03 for 5.41)
+//  12 Hit LED timeout in seconds
+//  13 Sound set - See section 2.3.2
+//  14 Overheat limit in rounds/min
+//  15 Reserved
+//  16 Reserved
+//  17 Damage per shot - See section 2.3.3
+//  18 Clip size - 0xFF is unlimited
+//  19 Number of clips - 0xCA is unlimited
+//  20 Fire selector - See 2.3.4
+//  21 Number of rounds for burst mode
+//  22 Cyclic RPM - See 2.3.5
+//  23 Reload delay in seconds
+//  24 IR power - See 2.3.6
+//  25 IR range - See 2.3.7
+//  26 Tagger on/off settings - See 2.3.8
+//  27 Respawn health - See 2.3.9
+//  28 Reserved
+//  29 Respawn delay in tens of seconds
+//  30 Armour value
+//  31 Game on/off settings 1/2 - See 2.3.10
+//  32 Game on/off settings 2/2 - See 2.3.11
+//  33 Hit delay - See 2.3.12
+//  34 Start delay in seconds
+//  35 Death delay in seconds
+//  36 Time limit in minutes
+//  37 Maximum respawns
+//  38 Reserved (0xFF in 5.41)
+//  39 Checksum - See 2.3.13
 
 // // Byte 7 - Team ID
 // std::map<uint8_t, std::string> teamMap = {
@@ -172,7 +163,6 @@ extern "C" {
 //     {0x0E, 75},
 //     {0x0F, 100}
 // };
-
 
 // // Fire selector - Byte 20
 // std::map<uint8_t, std::string> fireModeMap = {
@@ -261,7 +251,6 @@ extern "C" {
 // uint8_t byteValue = 0x0A; // or any valid value
 // float delay = hitDelay[byteValue]; // this will be 7.0 for byteValue = 0x0A
 
-
 // struct PlayerData {
 //   uint8_t playerId;
 //   uint8_t teamId; // refer to section 2.3.1 for interpretation
@@ -275,53 +264,52 @@ extern "C" {
 //   uint8_t checksum; // refer to section 2.3.13 for calculation
 // };
 
-class MilesTagTX
-{
-  public:
+class MilesTagTX {
+   public:
     MilesTagTX();
     MilesTagTX(int _txPin, int _channel);
     bool SetTx(int _txPin, int _channel);
     void txConfig();
-    void fireShot(unsigned long playerId, unsigned long dmg);
+    void fireShot(u_int32_t playerId, u_int32_t dmg);
     void sendCommand(bool shotCommand, uint8_t command, uint64_t data);
     void sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone);
 
-  private:
-    void irTransmit(bool shotCommand, bool extraData, unsigned long Buffer, int nbits);
-    unsigned long quantitytoBin(unsigned long dmg);
-    unsigned long has_even_parity(unsigned long x);
-    unsigned long add_parity(unsigned long x);
+   private:
+    void irTransmit(bool shotCommand, bool extraData, u_int32_t Buffer, int nbits);
+    u_int32_t quantitytoBin(u_int32_t dmg);
+    u_int32_t has_even_parity(u_int32_t x);
+    u_int32_t add_parity(u_int32_t x);
+    u_int32_t calculateChecksum(u_int32_t data, int nbits);
 
-    int             txGpioNum;
-    int             txRmtPort;
+    int txGpioNum;
+    int txRmtPort;
 };
 
 typedef struct MTShotRecieved {
-  unsigned long noOfBits;
-  unsigned long quantity;
-  unsigned long playerId;
-  bool error = true;
+    u_int32_t noOfBits;
+    u_int32_t quantity;
+    u_int32_t playerId;
+    bool error = true;
 } MTShotRecieved;
 
 typedef struct {
-  unsigned long noOfBits;
-  uint8_t command;
-  uint32_t data;
-  bool error;
+    u_int32_t noOfBits;
+    uint8_t command;
+    uint32_t data;
+    bool error;
 } MTCommandData;
 
-class MilesTagRX
-{
-  public:
+class MilesTagRX {
+   public:
     MilesTagRX();
     MilesTagRX(int _rxPin, int _channel);
     bool SetRx(int _rxPin, int _channel);
     void rxConfig();
     int readIR();
     void decodeRAW(rmt_item32_t *rawDataIn, int numItems, unsigned int *irDataOut);
-    void getDataIR(rmt_item32_t item, unsigned int* irDataOut, int index);
-    MTShotRecieved decodeShotData(unsigned long data, uint8_t bitCount);
-    MTCommandData decodeCommandData(unsigned long data, uint8_t bitCount);
+    void getDataIR(rmt_item32_t item, unsigned int *irDataOut, int index);
+    MTShotRecieved decodeShotData(u_int32_t data, uint8_t bitCount);
+    MTCommandData decodeCommandData(u_int32_t data, uint8_t bitCount);
     void processCommand(uint16_t command);
     void clearHits();
     void clearCommands();
@@ -330,10 +318,13 @@ class MilesTagRX
     MTCommandData Commands[20];
     int hitCount = 0;
     int commandCount = 0;
-  private:
-    unsigned long binToQuantity(unsigned long dmg);
-    unsigned long has_even_parity(unsigned long x);
-    int             rxGpioNum;
-    int             rxRmtPort;    
+
+   private:
+    u_int32_t binToQuantity(u_int32_t dmg);
+    u_int32_t has_even_parity(u_int32_t x);
+    u_int32_t extractChecksum(u_int32_t data, int nbits);
+    u_int32_t calculateChecksum(u_int32_t data, int nbits);
+    int rxGpioNum;
+    int rxRmtPort;
 };
 #endif
