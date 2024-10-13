@@ -52,10 +52,29 @@ static std::map<WEAPONTYPE, String> WeaponTypesMap = {{WEAPONTYPE::RIFLE, "RIFLE
 
 /****************************************************************************************************************************************************************************************/
 
-enum class DEVICESTATUS { UNASSIGNED, REGISTERED, ACTIVE, INACTIVE, SENDING, RELOADING };
+enum class DEVICESTATUS {
+    DETACHED,
+    REGISTERED,
+    READY,  // Weapon is linked on the player side
+    ACTIVE,
+    INACTIVE,
+    SENDING,
+    RELOADING,
+    RESET
+};
 
-static std::map<DEVICESTATUS, String> DeviceStatus = {{DEVICESTATUS::UNASSIGNED, "UNASSIGNED"}, {DEVICESTATUS::REGISTERED, "REGISTERED"}, {DEVICESTATUS::ACTIVE, "ACTIVE"},
-                                                      {DEVICESTATUS::INACTIVE, "INACTIVE"},     {DEVICESTATUS::SENDING, "SENDING"},       {DEVICESTATUS::RELOADING, "RELOADING"}};
+static std::map<DEVICESTATUS, String> DeviceStatus = {{DEVICESTATUS::DETACHED, "DETACHED"}, {DEVICESTATUS::REGISTERED, "REGISTERED"}, {DEVICESTATUS::READY, "READY"},         {DEVICESTATUS::ACTIVE, "ACTIVE"},
+                                                      {DEVICESTATUS::INACTIVE, "INACTIVE"}, {DEVICESTATUS::SENDING, "SENDING"},       {DEVICESTATUS::RELOADING, "RELOADING"}, {DEVICESTATUS::RESET, "RESET"}};
+
+// struct Device {
+//     DEVICETYPE deviceType;
+//     DEVICESTATUS deviceStatus;
+
+//     Device() = default;
+
+//     // Constructor
+//     Device(DEVICETYPE _deviceType, DEVICESTATUS _deviceStatus) : deviceType(_deviceType), deviceStatus(_deviceStatus) {}
+// };
 
 /****************************************************************************************************************************************************************************************/
 
@@ -106,10 +125,10 @@ struct Player {
     uint32_t playerId = 999;
     uint32_t team = 0;
     String name = "";
-    PLAYERSTATE state = PLAYERSTATE::DETACHED;
+    PLAYERSTATE playerState = PLAYERSTATE::DETACHED;
     PLAYERSTATE previousState;
-    uint32_t playerAddr = 0;
-    std::vector<uint32_t> weaponAddrs = {};
+    String playerAddr = "";
+    std::vector<String> weaponAddrs = {};
 
     uint32_t score = 0;    // score of player
     uint32_t kills = 0;    // amount of kills
@@ -137,12 +156,12 @@ struct Player {
     Player() = default;
 
     // Constructor
-    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _state, uint32_t _playerAddr, std::vector<uint32_t> _weaponAddrs, uint32_t _score, uint32_t _kills, uint32_t _deaths, uint32_t _cpoint, uint32_t _assists,
+    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _playerState, String _playerAddr, std::vector<String> _weaponAddrs, uint32_t _score, uint32_t _kills, uint32_t _deaths, uint32_t _cpoint, uint32_t _assists,
            uint32_t _maxHealth, uint32_t _minHealth, bool _localRespawn, uint32_t _respawnDelay)
         : playerId(_playerId),
           team(_team),
           name(_name),
-          state(_state),
+          playerState(_playerState),
           playerAddr(_playerAddr),
           weaponAddrs(_weaponAddrs),
           score(_score),
@@ -156,21 +175,21 @@ struct Player {
           respawnDelay(_respawnDelay) {}
 
     // Add a constructor to initialize the Player object
-    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _state, uint32_t _playerAddr) : playerId(_playerId), team(_team), name(_name), state(_state), playerAddr(_playerAddr) {}
+    Player(uint32_t _playerId, uint32_t _team, String _name, PLAYERSTATE _playerState, String _playerAddr) : playerId(_playerId), team(_team), name(_name), playerState(_playerState), playerAddr(_playerAddr) {}
 
     void setState(String stateName) {
         for (const auto &findPlayerState : PlayerStates) {
             if (findPlayerState.second == stateName) {
-                state = findPlayerState.first;
+                playerState = findPlayerState.first;
                 break;
             }
         }
     }
 
-    String getState() const { return PlayerStates[state]; }
+    String getState() const { return PlayerStates[playerState]; }
 
     int getHealth() {
-        switch (state) {
+        switch (playerState) {
             case PLAYERSTATE::RESPAWNING:
                 return -1;
             case PLAYERSTATE::DEAD:
@@ -183,17 +202,84 @@ struct Player {
 
 /****************************************************************************************************************************************************************************************/
 
+// struct GameSetup {
+//     GAMEMODES gameMode = GAMEMODES::FREE_FOR_ALL;
+//     GAMESTATE gameState = GAMESTATE::SETUP;
+//     uint32_t gameStartTime = 0;
+//     bool teamBased = true;
+//     uint32_t teams = 2;
+//     std::map<uint8_t, uint32_t> teamScore;
+//     bool friendlyFire = false;
+//     uint32_t playerCount = 0;
+//     uint32_t playerId = 999;
+//     std::map<uint32_t, Player> players = std::map<uint32_t, Player>();
+//     LAUNCHTRIGGER launchTrigger = LAUNCHTRIGGER::TIMER;
+//     uint32_t launchTime = 0;
+//     STOPTRIGGER stopTrigger = STOPTRIGGER::SCORE;
+//     uint32_t stopLimit = 100;
+//     uint32_t killMultiplier = 10;
+//     uint8_t killIncrement = 1;
+//     uint32_t assistMultiplier = 5;
+//     uint8_t assistIncrement = 1;
+//     uint32_t gameModePoints = 0;
+//     uint32_t conquestPoints = 0;
+//     bool extendedUpdates = false;
+//     // Used to create a pointer to the this player
+//     game_management::Player *player;
+//     // Default constructor
+//     GameSetup() = default;
+
+//     // Add a constructor to initialize the GameSetup object
+//     GameSetup(GAMEMODES _gameMode, GAMESTATE _gameState, uint32_t _gameStartTime, bool _teamBased, uint32_t _teams, bool _friendlyFire, uint32_t _playerCount, std::map<uint32_t, Player> _players, LAUNCHTRIGGER _launchTrigger,
+//               uint32_t _launchTime, STOPTRIGGER _stopTrigger, uint32_t _stopLimit, uint32_t _killMultiplier, uint32_t _assistMultiplier, uint32_t _gameModePoints, uint32_t _conquestPoints, bool _extendedUpdates)
+//         : gameMode(_gameMode),
+//           gameState(_gameState),
+//           gameStartTime(_gameStartTime),
+//           teamBased(_teamBased),
+//           teams(_teams),
+//           friendlyFire(_friendlyFire),
+//           playerCount(_playerCount),
+//           players(_players),
+//           launchTrigger(_launchTrigger),
+//           launchTime(_launchTime),
+//           stopTrigger(_stopTrigger),
+//           stopLimit(_stopLimit),
+//           killMultiplier(_killMultiplier),
+//           assistMultiplier(_assistMultiplier),
+//           gameModePoints(_gameModePoints),
+//           conquestPoints(_conquestPoints),
+//           extendedUpdates(_extendedUpdates) {}
+
+//     GameSetup(GAMEMODES _gameMode, GAMESTATE _gameState, bool _teamBased, uint32_t _teams, bool _friendlyFire, uint32_t _playerCount, std::map<uint32_t, Player> _players, LAUNCHTRIGGER _launchTrigger, uint32_t _launchTime,
+//               STOPTRIGGER _stopTrigger, uint32_t _stopLimit)
+//         : gameMode(GAMEMODES::FREE_FOR_ALL),
+//           gameState(GAMESTATE::SETUP),
+//           gameStartTime(0),
+//           teamBased(true),
+//           teams(2),
+//           friendlyFire(false),
+//           playerCount(0),
+//           players({}),
+//           launchTrigger(_launchTrigger),
+//           launchTime(_launchTime),
+//           stopTrigger(_stopTrigger),
+//           stopLimit(600),
+//           killMultiplier(10),
+//           assistMultiplier(5),
+//           gameModePoints(5),
+//           conquestPoints(0),
+//           extendedUpdates(true) {}
 struct GameSetup {
     GAMEMODES gameMode = GAMEMODES::FREE_FOR_ALL;
     GAMESTATE gameState = GAMESTATE::SETUP;
     uint32_t gameStartTime = 0;
     bool teamBased = true;
     uint32_t teams = 2;
-    std::map<uint8_t, uint32_t> teamScore;
-    bool friendlyFire = false;
+    std::map<uint8_t, uint32_t> teamScore{};
+    bool friendlyFire = true;
     uint32_t playerCount = 0;
     uint32_t playerId = 999;
-    std::map<uint32_t, Player> players = std::map<uint32_t, Player>();
+    std::map<uint32_t, Player> players{};
     LAUNCHTRIGGER launchTrigger = LAUNCHTRIGGER::TIMER;
     uint32_t launchTime = 0;
     STOPTRIGGER stopTrigger = STOPTRIGGER::SCORE;
@@ -205,54 +291,60 @@ struct GameSetup {
     uint32_t gameModePoints = 0;
     uint32_t conquestPoints = 0;
     bool extendedUpdates = false;
+    game_management::Player *player = nullptr;
 
-    // Used to create a pointer to the this player
-    game_management::Player *player;
+    GameSetup()
+        : gameMode(GAMEMODES::FREE_FOR_ALL),
+          gameState(GAMESTATE::SETUP),
+          gameStartTime(0),
+          teamBased(true),
+          teams(2),
+          teamScore(),
+          friendlyFire(true),
+          playerCount(0),
+          playerId(999),
+          players(),
+          launchTrigger(LAUNCHTRIGGER::TIMER),
+          launchTime(0),
+          stopTrigger(STOPTRIGGER::SCORE),
+          stopLimit(100),
+          killMultiplier(10),
+          killIncrement(1),
+          assistMultiplier(5),
+          assistIncrement(1),
+          gameModePoints(0),
+          conquestPoints(0),
+          extendedUpdates(false),
+          player(nullptr) {}
 
-    // Default constructor
-    GameSetup() = default;
-
-    // Add a constructor to initialize the GameSetup object
-    GameSetup(GAMEMODES _gameMode, GAMESTATE _gameState, uint32_t _gameStartTime, bool _teamBased, uint32_t _teams, bool _friendlyFire, uint32_t _playerCount, std::map<uint32_t, Player> _players, LAUNCHTRIGGER _launchTrigger,
+    // Custom constructor
+    GameSetup(GAMEMODES _gameMode, GAMESTATE _gameState, uint32_t _gameStartTime, bool _teamBased, uint32_t _teams, bool _friendlyFire, uint32_t _playerCount, const std::map<uint32_t, Player> &_players, LAUNCHTRIGGER _launchTrigger,
               uint32_t _launchTime, STOPTRIGGER _stopTrigger, uint32_t _stopLimit, uint32_t _killMultiplier, uint32_t _assistMultiplier, uint32_t _gameModePoints, uint32_t _conquestPoints, bool _extendedUpdates)
         : gameMode(_gameMode),
           gameState(_gameState),
           gameStartTime(_gameStartTime),
           teamBased(_teamBased),
           teams(_teams),
+          teamScore(),
           friendlyFire(_friendlyFire),
           playerCount(_playerCount),
+          playerId(999),
           players(_players),
           launchTrigger(_launchTrigger),
           launchTime(_launchTime),
           stopTrigger(_stopTrigger),
           stopLimit(_stopLimit),
           killMultiplier(_killMultiplier),
+          killIncrement(1),
           assistMultiplier(_assistMultiplier),
+          assistIncrement(1),
           gameModePoints(_gameModePoints),
           conquestPoints(_conquestPoints),
-          extendedUpdates(_extendedUpdates) {}
+          extendedUpdates(_extendedUpdates),
+          player(nullptr) {}
 
-    GameSetup(GAMEMODES _gameMode, GAMESTATE _gameState, bool _teamBased, uint32_t _teams, bool _friendlyFire, uint32_t _playerCount, std::map<uint32_t, Player> _players, LAUNCHTRIGGER _launchTrigger, uint32_t _launchTime,
-              STOPTRIGGER _stopTrigger, uint32_t _stopLimit)
-        : gameMode(GAMEMODES::FREE_FOR_ALL),
-          gameState(GAMESTATE::SETUP),
-          gameStartTime(0),
-          teamBased(true),
-          teams(2),
-          friendlyFire(false),
-          playerCount(0),
-          players({}),
-          launchTrigger(_launchTrigger),
-          launchTime(_launchTime),
-          stopTrigger(_stopTrigger),
-          stopLimit(600),
-          killMultiplier(10),
-          assistMultiplier(5),
-          gameModePoints(5),
-          conquestPoints(0),
-          extendedUpdates(true) {}
-
+    // Reset function to reinitialize all members to their default values
+    void reset() { *this = GameSetup(); }
     /****************************************************************************************************************************************************************************************/
 
     String getGameMode() { return GameModes[gameMode].first; }
@@ -350,12 +442,12 @@ struct GameSetup {
                 newPlayer.setState(doc["state"].as<String>());
             }
             if (doc.containsKey("playerAddr")) {
-                newPlayer.playerAddr = doc["playerAddr"];
+                newPlayer.playerAddr = doc["playerAddr"].as<String>();
             }
             if (doc.containsKey("weaponAddrs")) {
                 JsonArray array = doc["weaponAddrs"].as<JsonArray>();
                 for (JsonVariant v : array) {
-                    newPlayer.weaponAddrs.push_back(v.as<uint32_t>());
+                    newPlayer.weaponAddrs.push_back(v.as<String>());
                 }
             }
             if (doc.containsKey("score")) {
@@ -396,7 +488,7 @@ struct GameSetup {
         return newPlayer;
     }
 
-    PLAYERSTATE getPlayerState(uint32_t playerId) { return players[playerId].state; }
+    PLAYERSTATE getPlayerState(uint32_t playerId) { return players[playerId].playerState; }
 
     /****************************************************************************************************************************************************************************************/
 
@@ -439,8 +531,8 @@ struct GameSetup {
             preferences.putUInt((baseKey + "playerId").c_str(), player.second.playerId);
             preferences.putUInt((baseKey + "team").c_str(), player.second.team);
             preferences.putString((baseKey + "name").c_str(), player.second.name.c_str());
-            preferences.putInt((baseKey + "state").c_str(), static_cast<int>(player.second.state));
-            preferences.putUInt((baseKey + "playAddr").c_str(), player.second.playerAddr);
+            preferences.putInt((baseKey + "state").c_str(), static_cast<int>(player.second.playerState));
+            preferences.putString((baseKey + "playAddr").c_str(), player.second.playerAddr.c_str());
             preferences.putUInt((baseKey + "score").c_str(), player.second.score);
             preferences.putUInt((baseKey + "kills").c_str(), player.second.kills);
             preferences.putUInt((baseKey + "deaths").c_str(), player.second.deaths);
@@ -451,11 +543,12 @@ struct GameSetup {
             preferences.putBool((baseKey + "localspw").c_str(), player.second.localRespawn);
             preferences.putUInt((baseKey + "spwDelay").c_str(), player.second.respawnDelay);
             String weaponAddrsStr = "";
-            for (uint32_t addr : player.second.weaponAddrs) {
+            for (String addr : player.second.weaponAddrs) {
                 weaponAddrsStr += String(addr) + ",";
             }
 
             preferences.putString((baseKey + "WpnAddrs").c_str(), weaponAddrsStr.c_str());
+            Serial.println("Save - Player ID: " + String(player.second.playerId) + " Player Address: " + String(player.second.playerAddr) + " Number of weapon Addresses: " + String(player.second.weaponAddrs.size()));
         }
 
         preferences.end();
@@ -498,8 +591,8 @@ struct GameSetup {
             player.playerId = preferences.getUInt((playerKey + "playerId").c_str(), 0);
             player.team = preferences.getUInt((playerKey + "team").c_str(), 0);
             player.name = preferences.getString((playerKey + "name").c_str(), "");
-            player.state = static_cast<PLAYERSTATE>(preferences.getInt((playerKey + "state").c_str(), 0));
-            player.playerAddr = preferences.getUInt((playerKey + "playAddr").c_str(), 0);
+            player.playerState = static_cast<PLAYERSTATE>(preferences.getInt((playerKey + "state").c_str(), 0));
+            player.playerAddr = preferences.getString((playerKey + "playAddr").c_str(), "");
             player.score = preferences.getUInt((playerKey + "score").c_str(), 0);
             player.kills = preferences.getUInt((playerKey + "kills").c_str(), 0);
             player.deaths = preferences.getUInt((playerKey + "deaths").c_str(), 0);
@@ -520,17 +613,17 @@ struct GameSetup {
             int pos = 0;
             while ((pos = weaponAddrsStr.indexOf(',')) >= 0) {
                 String addrStr = weaponAddrsStr.substring(0, pos);
-                uint32_t addr = strtoul(addrStr.c_str(), NULL, 10);
+                String addr = addrStr;
                 player.weaponAddrs.push_back(addr);
                 Serial.println("Weapon address: " + String(addr));
                 weaponAddrsStr.remove(0, pos + 1);
             }
             if (weaponAddrsStr.length() > 0) {
-                uint32_t addr = strtoul(weaponAddrsStr.c_str(), NULL, 10);
+                String addr = weaponAddrsStr;
                 player.weaponAddrs.push_back(addr);
                 Serial.println("Weapon address: " + weaponAddrsStr);
             }
-            Serial.println("Player ID: " + String(player.playerId) + " Number of weapon Addresses: " + String(player.weaponAddrs.size()));
+            Serial.println("Load - Player ID: " + String(player.playerId) + " Player Address: " + String(player.playerAddr) + " Number of weapon Addresses: " + String(player.weaponAddrs.size()));
 
             players[player.playerId] = player;
         }

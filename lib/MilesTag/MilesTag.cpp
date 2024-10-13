@@ -47,14 +47,23 @@ extern "C" {
 #define DEBUG_SCALE 1
 #define CDEBUG 1
 
-#define SHOT_HEADER_US 3200  // Header when send a shot
+// #define SHOT_HEADER_US 3200  // Header when send a shot
+// #define CMD_HEADER_US 4000   // Header when send a command
+// #define CMD_EXTRA_US 5600    // Marker indecating extra data
+// #define END_US 6400          // End Marker
+// #define SPACE_US 800
+// #define ONE_US 1600
+// #define ZERO_US 800
+// #define OFFSET 150
+
+#define SHOT_HEADER_US 3000  // Header when send a shot
 #define CMD_HEADER_US 4000   // Header when send a command
-#define CMD_EXTRA_US 5600    // Marker indecating extra data
-#define END_US 6400          // End Marker
-#define SPACE_US 800
-#define ONE_US 1600
-#define ZERO_US 800
-#define OFFSET 150
+#define CMD_EXTRA_US 5000    // Marker indicating extra data
+#define END_US 6000          // End Marker
+#define SPACE_US 1000
+#define ONE_US 2000
+#define ZERO_US 1000
+#define OFFSET 100
 
 #define SIGNAL_ID_HIT 0x01
 #define SIGNAL_ID_GRENADE 0x02
